@@ -1,3 +1,4 @@
+
 const service = require('../services/postService');
 const http = require('../utils/http');
 
@@ -28,7 +29,10 @@ function explode(req, res) {
   try {
     service.explode();
   } catch (err) {
-    return http.sendError(res, 500, { error: err.message, stack: err.debug || err.stack });
+    return http.sendError(res, 500, {
+      error: err.message,
+      stack: err.debug || err.stack
+    });
   }
 }
 
