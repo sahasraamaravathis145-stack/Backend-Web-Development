@@ -1,3 +1,4 @@
+
 const express = require('express');
 const postRoutes = require('./routes/postRoutes');
 const { resetData } = require('./data/postStore');
@@ -5,6 +6,7 @@ const controller = require('./controllers/postController');
 
 function createApp() {
   const app = express();
+
   app.use(express.json());
 
   app.use('/', postRoutes);
@@ -19,12 +21,43 @@ function createApp() {
   // - stop exposing old verb routes as public contract
   // - expose safe internal failure route for testing/demo
 
+  // Handle malformed JSON safely
+  app.use((err, req, res, next) => {
+    if (err.type === 'entity.parse.failed') {
+      return res.status(400).json({
+        error: {
+          code: 'BAD_REQUEST',
+          message: 'Invalid JSON body'
+        }
+      });
+    }
+
+    return next(err);
+  });
+
+  // Handle unexpected errors safely
+  app.use((err, req, res, next) => {
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    console.error('Unhandled API error:', err);
+
+    return res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Internal server error'
+      }
+    });
+  });
+
   return app;
 }
 
 if (require.main === module) {
   const app = createApp();
   const port = 3000;
+
   app.listen(port, () => {
     console.log(`Starter API listening on port ${port}`);
   });
