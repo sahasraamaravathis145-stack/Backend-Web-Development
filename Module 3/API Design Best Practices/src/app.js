@@ -21,13 +21,27 @@ function createApp() {
   // - stop exposing old verb routes as public contract
   // - expose safe internal failure route for testing/demo
 
+  // Handle malformed JSON safely
+  app.use((err, req, res, next) => {
+    if (err.type === 'entity.parse.failed') {
+      return res.status(400).json({
+        error: {
+          code: 'BAD_REQUEST',
+          message: 'Invalid JSON body'
+        }
+      });
+    }
+
+    return next(err);
+  });
+
   // Handle unexpected errors safely
   app.use((err, req, res, next) => {
-    console.error('Internal server error');
-
     if (res.headersSent) {
       return next(err);
     }
+
+    console.error('Unhandled API error:', err);
 
     return res.status(500).json({
       error: {

@@ -19,26 +19,29 @@ function sendOk(res, payload) {
 }
 
 function sendError(res, status, payload = {}) {
-  const messages = {
-    400: 'Bad request',
-    404: 'Resource not found',
-    500: 'Internal server error'
-  };
+  const safeStatus = [400, 404, 500].includes(status)
+    ? status
+    : 500;
 
-  const code = payload.code || (
-    status === 404 ? 'NOT_FOUND' :
-    status === 400 ? 'BAD_REQUEST' :
-    'INTERNAL_ERROR'
-  );
+  const code =
+    safeStatus === 400
+      ? 'BAD_REQUEST'
+      : safeStatus === 404
+        ? 'NOT_FOUND'
+        : 'INTERNAL_ERROR';
 
+  // Never expose internal error details for server errors.
   const message =
-    status === 500
+    safeStatus === 500
       ? 'Internal server error'
-      : payload.message || messages[status] || 'Request failed';
+      : payload.message ||
+        (safeStatus === 404
+          ? 'Resource not found'
+          : 'Bad request');
 
-  return res.status(status).json({
+  return res.status(safeStatus).json({
     error: {
-      code,
+      code: payload.code || code,
       message
     }
   });

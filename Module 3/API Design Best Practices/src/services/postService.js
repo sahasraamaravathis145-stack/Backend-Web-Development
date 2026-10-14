@@ -2,21 +2,41 @@
 const store = require('../data/postStore');
 
 function listPosts(query = {}) {
+  function parsePositiveInteger(value, fallback, name) {
+    if (value === undefined) {
+      return fallback;
+    }
+
+    const parsed = Number(value);
+
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      const err = new Error(
+        `${name} must be a positive integer`
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return parsed;
+  }
+
+  const page = parsePositiveInteger(query.page, 1, 'page');
+  const requestedLimit = parsePositiveInteger(
+    query.limit,
+    2,
+    'limit'
+  );
+
+  // Default limit = 2; maximum limit = 10.
+  const limit = Math.min(10, requestedLimit);
+
   const allPosts = store.getAllPosts();
-
-  // Pagination
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const requestedLimit = parseInt(query.limit, 10) || 2;
-  const limit = Math.min(10, Math.max(1, requestedLimit));
-
   const total = allPosts.length;
   const pages = Math.ceil(total / limit);
   const startIndex = (page - 1) * limit;
 
-  const data = allPosts.slice(startIndex, startIndex + limit);
-
   return {
-    data,
+    data: allPosts.slice(startIndex, startIndex + limit),
     meta: {
       page,
       limit,
@@ -31,9 +51,25 @@ function getPost(id) {
 }
 
 function createPost(body = {}) {
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    Array.isArray(body) ||
+    typeof body.title !== 'string' ||
+    !body.title.trim() ||
+    typeof body.author !== 'string' ||
+    !body.author.trim()
+  ) {
+    const err = new Error(
+      'title and author must be non-empty strings'
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
   return store.createPost({
-    title: body.title,
-    author: body.author
+    title: body.title.trim(),
+    author: body.author.trim()
   });
 }
 
@@ -50,7 +86,7 @@ function likePost(id) {
 }
 
 function explode() {
-  const err = new Error('Internal server error');
+  const err = new Error('Intentional internal failure');
   err.statusCode = 500;
   throw err;
 }
